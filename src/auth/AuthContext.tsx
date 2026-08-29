@@ -4,6 +4,7 @@ import { apiClient, tokenStorage } from '../api/client'
 type AuthContextValue = {
   isAuthenticated: boolean
   login: (username: string, password: string) => Promise<void>
+  loginWithToken: (token: string) => Promise<boolean>
   logout: () => void
 }
 
@@ -18,13 +19,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsAuthenticated(true)
   }
 
+  // Вход по постоянной ссылке ?token=... (для клиента без пароля) — тот же токен,
+  // что и раньше, привязка к браузеру на бэкенде (см. Tokens.check_user_agent).
+  const loginWithToken = async (token: string) => {
+    try {
+      const { data } = await apiClient.get('/api/token-login/', { params: { token } })
+      tokenStorage.setTokens(data.access, data.refresh)
+      setIsAuthenticated(true)
+      return true
+    } catch {
+      return false
+    }
+  }
+
   const logout = () => {
     tokenStorage.clear()
     setIsAuthenticated(false)
   }
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, login, loginWithToken, logout }}>
       {children}
     </AuthContext.Provider>
   )
