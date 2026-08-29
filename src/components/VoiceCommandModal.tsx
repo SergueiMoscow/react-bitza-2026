@@ -16,7 +16,7 @@ type Stage =
   | { type: 'transcribing' }
   | { type: 'processing'; text: string }
   | { type: 'clarify'; text: string; message: string }
-  | { type: 'confirm'; intent: PaymentIntent }
+  | { type: 'confirm'; intent: PaymentIntent; bankAccounts: string[] }
   | { type: 'saving' }
   | { type: 'done' }
   | { type: 'error'; message: string }
@@ -74,7 +74,7 @@ export function VoiceCommandModal({ onClose }: { onClose: () => void }) {
     try {
       const res = await apiClient.post('/api/rent/voice-command/', { text })
       if (res.data.status === 'confirm') {
-        setStage({ type: 'confirm', intent: res.data.intent })
+        setStage({ type: 'confirm', intent: res.data.intent, bankAccounts: res.data.bank_accounts ?? [] })
       } else {
         setStage({ type: 'clarify', text, message: res.data.message })
       }
@@ -146,7 +146,12 @@ export function VoiceCommandModal({ onClose }: { onClose: () => void }) {
       )}
 
       {stage.type === 'confirm' && (
-        <VoiceConfirmForm intent={stage.intent} onSave={handleSave} onCancel={() => setStage({ type: 'idle' })} />
+        <VoiceConfirmForm
+          intent={stage.intent}
+          bankAccounts={stage.bankAccounts}
+          onSave={handleSave}
+          onCancel={() => setStage({ type: 'idle' })}
+        />
       )}
 
       {stage.type === 'saving' && <p>Сохраняем…</p>}
@@ -174,10 +179,12 @@ export function VoiceCommandModal({ onClose }: { onClose: () => void }) {
 
 function VoiceConfirmForm({
   intent,
+  bankAccounts,
   onSave,
   onCancel,
 }: {
   intent: PaymentIntent
+  bankAccounts: string[]
   onSave: (intent: PaymentIntent) => void
   onCancel: () => void
 }) {
@@ -211,7 +218,17 @@ function VoiceConfirmForm({
         </label>
         <label>
           Счёт
-          <input value={bankAccount} onChange={(e) => setBankAccount(e.target.value)} />
+          <select value={bankAccount} onChange={(e) => setBankAccount(e.target.value)}>
+            <option value="">—</option>
+            {bankAccount && !bankAccounts.includes(bankAccount) && (
+              <option value={bankAccount}>{bankAccount}</option>
+            )}
+            {bankAccounts.map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </select>
         </label>
       </div>
       <div className="form-actions">
