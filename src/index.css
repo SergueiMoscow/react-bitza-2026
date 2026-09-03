@@ -687,6 +687,23 @@ tr.room_little_debt {
   margin: 0;
 }
 
+/* ---------- Contract renewal ---------- */
+
+.renewal-action {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  white-space: nowrap;
+}
+
+.renewal-action input[type='date'] {
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+}
+
 /* ---------- Documents section ---------- */
 
 .document-grid {

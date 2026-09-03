@@ -9,6 +9,7 @@ import { SummaryPage } from './pages/SummaryPage'
 import { ClientsPage } from './pages/ClientsPage'
 import { RoomsPage } from './pages/RoomsPage'
 import { ContractsPage } from './pages/ContractsPage'
+import { ContractRenewalPage } from './pages/ContractRenewalPage'
 import { PaymentsPage } from './pages/PaymentsPage'
 import { ElectricityPage } from './pages/ElectricityPage'
 import { GasPage } from './pages/GasPage'
@@ -57,6 +58,7 @@ function App() {
                 <Route path="/rooms" element={<RoomsPage />} />
                 <Route path="/clients" element={<ClientsPage />} />
                 <Route path="/contracts" element={<ContractsPage />} />
+                <Route path="/contract-renewal" element={<ContractRenewalPage />} />
                 <Route path="/payments" element={<PaymentsPage />} />
                 <Route path="/electricity" element={<ElectricityPage />} />
                 <Route path="/gas" element={<GasPage />} />
