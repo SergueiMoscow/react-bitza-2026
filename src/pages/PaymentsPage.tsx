@@ -15,7 +15,7 @@ export function PaymentsPage() {
   const [suggestions, setSuggestions] = useState<FieldSuggestions | null>(null)
   const [selectedRoom, setSelectedRoom] = useState<string>(roomFromUrl ?? '')
   const [data, setData] = useState<RoomPaymentsResponse | null>(null)
-  const [noContract, setNoContract] = useState(false)
+  const [page, setPage] = useState(1)
   const [error, setError] = useState<string | null>(null)
 
   const [date, setDate] = useState(today())
@@ -38,36 +38,29 @@ export function PaymentsPage() {
 
   const handleRoomChange = (room: string) => {
     setSelectedRoom(room)
+    setPage(1)
     setSearchParams(room ? { room } : {}, { replace: true })
   }
 
-  const loadPayments = (room: string) => {
+  const loadPayments = (room: string, pageNumber: number) => {
     if (!room) return
     setData(null)
-    setNoContract(false)
     setError(null)
     apiClient
-      .get<RoomPaymentsResponse>(`/api/rent/rooms/${room}/payments/`)
+      .get<RoomPaymentsResponse>(`/api/rent/rooms/${room}/payments/`, { params: { page: pageNumber } })
       .then((res) => setData(res.data))
-      .catch((err) => {
-        if (err.response?.status === 404) {
-          setNoContract(true)
-        } else {
-          setError('Не удалось загрузить оплаты')
-        }
-      })
+      .catch(() => setError('Не удалось загрузить оплаты'))
   }
 
   useEffect(() => {
     if (selectedRoom) {
-      loadPayments(selectedRoom)
+      loadPayments(selectedRoom, page)
     } else {
       setData(null)
-      setNoContract(false)
       setError(null)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedRoom])
+  }, [selectedRoom, page])
 
   const handleSubmit = async () => {
     if (!selectedRoom || amount === '') return
@@ -84,7 +77,8 @@ export function PaymentsPage() {
       })
       setAmount('')
       setDiscount(0)
-      loadPayments(selectedRoom)
+      setPage(1)
+      loadPayments(selectedRoom, 1)
     } catch {
       setError('Не удалось сохранить оплату — проверьте поля')
     } finally {
@@ -115,22 +109,25 @@ export function PaymentsPage() {
 
       {error && <p className="error">{error}</p>}
 
-      {noContract && (
+      {data && !data.contract && (
         <p className="hint-text">Для этого помещения нет активного договора — оплату внести нельзя.</p>
       )}
 
       {data && (
         <>
-          <p className="hint-text">
-            Договор {data.contract.number} — цена {data.contract.price.toLocaleString('ru-RU')} ₽
-            {data.contract.discount ? `, скидка ${data.contract.discount.toLocaleString('ru-RU')} ₽` : ''}
-          </p>
+          {data.contract && (
+            <p className="hint-text">
+              Договор {data.contract.number} — цена {data.contract.price.toLocaleString('ru-RU')} ₽
+              {data.contract.discount ? `, скидка ${data.contract.discount.toLocaleString('ru-RU')} ₽` : ''}
+            </p>
+          )}
 
           <div className="summary-table-wrap" style={{ marginBottom: '1rem' }}>
             <table className="summary-table">
               <thead>
                 <tr>
                   <th>Дата</th>
+                  <th>Клиент</th>
                   <th>Сумма</th>
                   <th>Скидка</th>
                   <th>Итого</th>
@@ -139,14 +136,15 @@ export function PaymentsPage() {
                 </tr>
               </thead>
               <tbody>
-                {data.payments.length === 0 && (
+                {data.payments.results.length === 0 && (
                   <tr>
-                    <td colSpan={6}>Пока нет оплат.</td>
+                    <td colSpan={7}>Пока нет оплат.</td>
                   </tr>
                 )}
-                {data.payments.map((p, i) => (
+                {data.payments.results.map((p, i) => (
                   <tr key={i}>
                     <td>{p.date}</td>
+                    <td>{p.contact_name || '—'}</td>
                     <td>{p.amount.toLocaleString('ru-RU')}</td>
                     <td>{p.discount ? p.discount.toLocaleString('ru-RU') : '—'}</td>
                     <td>{p.total.toLocaleString('ru-RU')}</td>
@@ -158,52 +156,66 @@ export function PaymentsPage() {
             </table>
           </div>
 
-          <div className="payment-form">
-            <div className="payment-form-title">Новая оплата</div>
-            <div className="payment-form-grid">
-              <label className="payment-field">
-                <span>Дата</span>
-                <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-              </label>
-              <label className="payment-field">
-                <span>Сумма</span>
-                <input
-                  type="number"
-                  placeholder="0"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value === '' ? '' : Number(e.target.value))}
-                />
-              </label>
-              <label className="payment-field">
-                <span>Скидка</span>
-                <input type="number" value={discount} onChange={(e) => setDiscount(Number(e.target.value))} />
-              </label>
-              <div className="payment-field payment-total">
-                <span>Итого</span>
-                <strong>{total.toLocaleString('ru-RU')} ₽</strong>
-              </div>
-              <label className="payment-field payment-field-wide">
-                <span>Счёт</span>
-                <input
-                  list="bank-account-suggestions"
-                  placeholder="Cash, Сбер, Тинькофф…"
-                  value={bankAccount}
-                  onChange={(e) => setBankAccount(e.target.value)}
-                />
-                <datalist id="bank-account-suggestions">
-                  {suggestions?.bank_accounts.map((v) => <option key={v} value={v} />)}
-                </datalist>
-              </label>
+          {(data.payments.previous || data.payments.next) && (
+            <div className="pagination">
+              <button disabled={!data.payments.previous} onClick={() => setPage((p) => p - 1)}>
+                ← Назад
+              </button>
+              <span className="hint-text">Всего: {data.payments.count}</span>
+              <button disabled={!data.payments.next} onClick={() => setPage((p) => p + 1)}>
+                Вперёд →
+              </button>
             </div>
-            <button
-              type="button"
-              className="payment-submit"
-              onClick={handleSubmit}
-              disabled={saving || amount === ''}
-            >
-              {saving ? 'Сохраняем…' : 'Добавить оплату'}
-            </button>
-          </div>
+          )}
+
+          {data.contract && (
+            <div className="payment-form">
+              <div className="payment-form-title">Новая оплата</div>
+              <div className="payment-form-grid">
+                <label className="payment-field">
+                  <span>Дата</span>
+                  <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+                </label>
+                <label className="payment-field">
+                  <span>Сумма</span>
+                  <input
+                    type="number"
+                    placeholder="0"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value === '' ? '' : Number(e.target.value))}
+                  />
+                </label>
+                <label className="payment-field">
+                  <span>Скидка</span>
+                  <input type="number" value={discount} onChange={(e) => setDiscount(Number(e.target.value))} />
+                </label>
+                <div className="payment-field payment-total">
+                  <span>Итого</span>
+                  <strong>{total.toLocaleString('ru-RU')} ₽</strong>
+                </div>
+                <label className="payment-field payment-field-wide">
+                  <span>Счёт</span>
+                  <input
+                    list="bank-account-suggestions"
+                    placeholder="Cash, Сбер, Тинькофф…"
+                    value={bankAccount}
+                    onChange={(e) => setBankAccount(e.target.value)}
+                  />
+                  <datalist id="bank-account-suggestions">
+                    {suggestions?.bank_accounts.map((v) => <option key={v} value={v} />)}
+                  </datalist>
+                </label>
+              </div>
+              <button
+                type="button"
+                className="payment-submit"
+                onClick={handleSubmit}
+                disabled={saving || amount === ''}
+              >
+                {saving ? 'Сохраняем…' : 'Добавить оплату'}
+              </button>
+            </div>
+          )}
         </>
       )}
     </div>

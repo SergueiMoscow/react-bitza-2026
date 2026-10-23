@@ -8,15 +8,18 @@ export type Payment = {
   book_account: string | null
 }
 
+export type RoomPayment = Payment & {
+  contact_name: string | null
+}
+
 export type RoomPaymentsResponse = {
   contract: {
     number: string
     room: string
     price: number
     discount: number
-  }
-  payments: Payment[]
-  bank_accounts: unknown[]
+  } | null
+  payments: PaginatedPayments<RoomPayment>
 }
 
 export type FieldSuggestions = {
@@ -24,9 +27,9 @@ export type FieldSuggestions = {
   book_accounts: string[]
 }
 
-export type PaginatedPayments = {
+export type PaginatedPayments<T = Payment> = {
   count: number
   next: string | null
   previous: string | null
-  results: Payment[]
+  results: T[]
 }
