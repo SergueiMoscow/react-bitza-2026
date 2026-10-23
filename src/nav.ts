@@ -11,6 +11,7 @@ export const NAV_ITEMS: NavItem[] = [
   { to: '/contracts', label: 'Договоры', icon: '📄' },
   { to: '/contract-renewal', label: 'Актуальность', icon: '🔄' },
   { to: '/payments', label: 'Оплаты', icon: '💰' },
+  { to: '/income-book', label: 'Книга доходов', icon: '📗' },
   { to: '/electricity', label: 'Электричество', icon: '⚡' },
   { to: '/gas', label: 'Газ', icon: '🔥' },
 ]
