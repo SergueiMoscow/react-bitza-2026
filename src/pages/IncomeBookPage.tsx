@@ -83,8 +83,14 @@ export function IncomeBookPage() {
             </tbody>
             <tfoot>
               <tr>
-                <td colSpan={4} style={{ textAlign: 'right', fontWeight: 600 }}>
+                <td colSpan={2} style={{ textAlign: 'right', fontWeight: 600 }}>
                   Итого за квартал:
+                </td>
+                <td style={{ fontWeight: 700 }}>
+                  {data.results.reduce((sum, p) => sum + p.amount, 0).toLocaleString('ru-RU')}
+                </td>
+                <td style={{ fontWeight: 700 }}>
+                  {data.results.reduce((sum, p) => sum + p.discount, 0).toLocaleString('ru-RU')}
                 </td>
                 <td style={{ fontWeight: 700 }}>{data.total.toLocaleString('ru-RU')} ₽</td>
               </tr>
